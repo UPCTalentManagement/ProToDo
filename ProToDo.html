@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro To Do</title>
+    <!-- Phosphor Icons for modern, clean UI icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts: Inter for UI -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Light Theme Variables */
+            --bg-body: #f3f4f6;
+            --bg-sidebar: #ffffff;
+            --bg-panel: #ffffff;
+            --bg-input: #f9fafb;
+            --border-color: #e5e7eb;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --primary: #4f46e5; /* Indigo 600 */
+            --primary-hover: #4338ca;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --radius: 8px;
+            --font-main: 'Inter', sans-serif;
+            --transition: all 0.2s ease;
+        }
+
+        [data-theme="dark"] {
+            /* Dark Theme Variables */
+            --bg-body: #0f172a;
+            --bg-sidebar: #1e293b;
+            --bg-panel: #1e293b;
+            --bg-input: #334155;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --primary: #6366f1;
+            --primary-hover: #818cf8;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        body {
+            margin: 0;
+            font-family: var(--font-main);
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        /* --- Layout --- */
+        aside {
+            width: 260px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            flex-shrink: 0;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #task-details-panel {
+            width: 350px;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 20;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+        }
+        
+        #task-details-panel.active { transform: translateX(0); }
+
+        /* --- Components --- */
+        .logo {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .nav-group { margin-bottom: 1.5rem; }
+        .nav-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 0.75rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+        .nav-item:hover, .nav-item.active {
+            background-color: var(--bg-input);
+            color: var(--text-primary);
+        }
+        .nav-item i { font-size: 1.1rem; }
+
+        .header-bar {
+            padding: 1rem 2rem;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background: var(--bg-input);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            width: 500px;
+            border: 1px solid transparent;
+        }
+        .search-bar:focus-within { border-color: var(--primary); }
+        .search-bar input {
+            border: none;
+            background: transparent;
+            margin-left: 0.5rem;
+            width: 100%;
+            color: var(--text-primary);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            font-size: 0.9rem;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-ghost { background: transparent; color: var(--text-secondary); }
+        .btn-ghost:hover { background: var(--bg-input); color: var(--text-primary); }
+
+        /* --- Views --- */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        /* List View */
+        .task-list { list-style: none; padding: 0; margin: 0; }
+        .task-item {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: var(--transition);
+        }
+        .task-item:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--text-secondary);
+            border-radius: 50%;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+        }
+        .task-checkbox.checked { background: var(--success); border-color: var(--success); }
+        .task-checkbox.checked::after { content: '✓'; color: white; font-size: 12px; }
+        
+        .task-content { flex: 1; }
+        .task-title { font-weight: 500; margin-bottom: 0.25rem; }
+        .task-meta { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--text-secondary); align-items: center; }
+        .tag { padding: 2px 8px; border-radius: 12px; background: var(--bg-input); font-size: 0.75rem; }
+        .priority-high { color: var(--danger); font-weight: 600; }
+        .priority-med { color: var(--warning); font-weight: 600; }
+        
+        /* Kanban View */
+        .kanban-board { display: flex; gap: 1.5rem; height: 100%; overflow-x: auto; }
+        .kanban-col {
+            min-width: 300px;
+            background: var(--bg-input);
+            border-radius: var(--radius);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .kanban-header { font-weight: 600; margin-bottom: 1rem; display: flex; justify-content: space-between; }
+        .kanban-body { flex: 1; overflow-y: auto; min-height: 100px; }
+
+        /* Eisenhower Matrix */
+        .eisenhower-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 1rem;
+            height: 100%;
+        }
+        .eisenhower-quadrant {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        .quadrant-title { font-weight: 700; margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9rem; text-transform: uppercase; }
+
+        /* Analytics */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card {
+            background: var(--bg-panel);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+        }
+        .stat-value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+        .stat-label { color: var(--text-secondary); font-size: 0.9rem; }
+
+        /* --- Detail Panel --- */
+        .panel-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: start; }
+        .panel-body { padding: 1.5rem; overflow-y: auto; flex: 1; }
+        .detail-group { margin-bottom: 1.5rem; }
+        .detail-label { display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight: 600; }
+        .detail-input { 
+            width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); 
+            border-radius: var(--radius); background: var(--bg-input); color: var(--text-primary); 
+        }
+        .pomodoro-widget {
+            background: linear-gradient(135deg, var(--primary), #818cf8);
+            color: white;
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            text-align: center;
+            margin-top: 1rem;
+        }
+        .timer-display { font-size: 2.5rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 1rem 0; }
+
+        /* --- Utilities --- */
+        .hidden { display: none !important; }
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--text-primary);
+            color: var(--bg-body);
+            padding: 1rem 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            transform: translateY(100px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+        }
+        .toast.show { transform: translateY(0); }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); display: grid; place-items: center;
+            z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: all; }
+        .modal {
+            background: var(--bg-panel); width: 500px; padding: 2rem;
+            border-radius: var(--radius); box-shadow: var(--shadow-md);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside>
+        <div class="logo">
+            <i class="ph ph-hexagon-fill"></i> Pro To Do
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Workspace</div>
+            <div class="nav-item active" onclick="app.switchView('inbox')">
+                <i class="ph ph-tray"></i> Tasks Inbox
+            </div>
+            <div class="nav-item" onclick="app.switchView('today')">
+                <i class="ph ph-sun"></i> Today
+            </div>
+            <div class="nav-item" onclick="app.switchView('upcoming')">
+                <i class="ph ph-calendar-blank"></i> Upcoming
+            </div>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-label">Productivity</div>
+            <div class="nav-item" onclick="app.switchView('eisenhower')">
+                <i class="ph ph-squares-four"></i> Eisenhower Matrix
+            </div>
+            <div class="nav-item" onclick="app.switchView('kanban')">
+                <i class="ph ph-kanban"></i> Kanban Board
+            </div>
+            <div class="nav-item" onclick="app.switchView('analytics')">
+                <i class="ph ph-chart-bar"></i> Analytics
+            </div>
+        </div>
+
+        <div style="margin-top: auto;">
+            <div class="nav-item" onclick="app.toggleTheme()">
+                <i class="ph ph-moon"></i> Toggle Theme
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Header -->
+        <header class="header-bar">
+            <div class="search-bar">
+                <i class="ph ph-robot"></i>
+                <input type="text" id="global-search" placeholder="Add Smart tasks e.g. : 'urgent Meeting tomorrow at 3pm'" onkeydown="if(event.key === 'Enter') app.handleSmartInput(this.value)">
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-ghost" onclick="app.simulateAISchedule()">
+                    <i class="ph ph-magic-wand"></i> Optimize Schedule
+                </button>
+                <button class="btn btn-primary" onclick="app.openAddModal()">
+                    <i class="ph ph-plus"></i> Add Task
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic View Container -->
+        <div id="view-container" class="content-area">
+            <!-- Content injected via JS -->
+        </div>
+    </main>
+
+    <!-- Detail Panel (Right Sidebar) -->
+    <div id="task-details-panel">
+        <div class="panel-header">
+            <h2 style="margin:0; font-size:1.1rem;">Task Details</h2>
+            <button class="btn btn-ghost" onclick="app.closePanel()"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="panel-body" id="panel-content">
+            <!-- Details injected via JS -->
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal">
+            <h2 style="margin-top:0;">New Task</h2>
+            <div class="detail-group">
+                <label class="detail-label">Title</label>
+                <input type="text" id="new-task-title" class="detail-input" placeholder="What needs to be done?">
+            </div>
+            <div class="detail-group">
+                <label class="detail-label">Priority</label>
+                <select id="new-task-priority" class="detail-input">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+            <div class="detail-group">
+                <label class="detail-label">Due Date</label>
+                <input type="date" id="new-task-date" class="detail-input">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 2rem;">
+                <button class="btn btn-ghost" onclick="document.getElementById('add-modal').classList.remove('open')">Cancel</button>
+                <button class="btn btn-primary" onclick="app.addTaskFromModal()">Create Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Action Successful</div>
+
+    <script>
+        /**
+         * Nexus Task Core Logic
+         * Handles state management, local storage, view rendering, and simulated AI/Backend features.
+         */
+        class NexusApp {
+            constructor() {
+                this.state = {
+                    tasks: [],
+                    view: 'inbox',
+                    theme: 'dark',
+                    selectedTaskId: null
+                };
+                
+                // Initialize
+                this.loadData();
+                this.applyTheme();
+                this.render();
+            }
+
+            // --- Persistence ---
+            saveData() {
+                localStorage.setItem('nexusData', JSON.stringify(this.state));
+            }
+
+            loadData() {
+                const data = localStorage.getItem('nexusData');
+                if (data) {
+                    this.state = JSON.parse(data);
+                } else {
+                    // Seed data for first-time users
+                    this.state.tasks = [
+                        { id: '1', title: 'Welcome to Pro To Do Task', priority: 'high', dueDate: new Date().toISOString().split('T')[0], completed: false, tags: ['onboarding'] }
+                        
+                    ];
+                }
+            }
+
+            // --- Theme Management ---
+            toggleTheme() {
+                this.state.theme = this.state.theme === 'dark' ? 'light' : 'dark';
+                this.applyTheme();
+                this.saveData();
+            }
+
+            applyTheme() {
+                document.documentElement.setAttribute('data-theme', this.state.theme);
+            }
+
+            // --- Core Task Logic ---
+            addTask(title, priority = 'medium', date = null) {
+                const newTask = {
+                    id: crypto.randomUUID(),
+                    title: title,
+                    priority: priority,
+                    dueDate: date,
+                    completed: false,
+                    tags: [],
+                    createdAt: new Date().toISOString()
+                };
+                this.state.tasks.push(newTask);
+                this.saveData();
+                this.render();
+                this.showToast('Task Added');
+            }
+
+            toggleTask(id) {
+                const task = this.state.tasks.find(t => t.id === id);
+                if (task) {
+                    task.completed = !task.completed;
+                    this.saveData();
+                    this.render();
+                    if (task.completed) this.playSound('success');
+                }
+            }
+
+            deleteTask(id) {
+                this.state.tasks = this.state.tasks.filter(t => t.id !== id);
+                this.closePanel();
+                this.saveData();
+                this.render();
+                this.showToast('Task Deleted');
+            }
+
+            updateTask(id, updates) {
+                const task = this.state.tasks.find(t => t.id === id);
+                if (task) {
+                    Object.assign(task, updates);
+                    this.saveData();
+                    this.render();
+                }
+            }
+
+            // --- Views & Rendering ---
+            switchView(viewName) {
+                this.state.view = viewName;
+                
+                // Update Sidebar UI
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                event.currentTarget.classList.add('active'); // Note: relies on click event bubbling correctly or binding
+                
+                this.render();
+            }
+
+            render() {
+                const container = document.getElementById('view-container');
+                container.innerHTML = '';
+
+                switch(this.state.view) {
+                    case 'inbox': this.renderListView(container, this.state.tasks); break;
+                    case 'today': this.renderTodayView(container); break;
+                    case 'kanban': this.renderKanbanView(container); break;
+                    case 'eisenhower': this.renderEisenhowerView(container); break;
+                    case 'analytics': this.renderAnalyticsView(container); break;
+                    case 'upcoming': this.renderUpcomingView(container); break;
+                }
+            }
+
+            // 1. List View
+            renderListView(container, tasks) {
+                const ul = document.createElement('ul');
+                ul.className = 'task-list';
+                
+                if (tasks.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; color:var(--text-secondary); margin-top:3rem;">
+                        <i class="ph ph-coffee" style="font-size:3rem;"></i><p>All caught up!</p>
+                    </div>`;
+                    return;
+                }
+
+                tasks.forEach(task => {
+                    ul.appendChild(this.createTaskElement(task));
+                });
+                container.appendChild(ul);
+            }
+
+            createTaskElement(task) {
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                li.draggable = true;
+                li.innerHTML = `
+                    <div class="task-checkbox ${task.completed ? 'checked' : ''}" onclick="app.toggleTask('${task.id}')"></div>
+                    <div class="task-content" onclick="app.openPanel('${task.id}')">
+                        <div class="task-title" style="${task.completed ? 'text-decoration:line-through; color:var(--text-secondary);' : ''}">${task.title}</div>
+                        <div class="task-meta">
+                            ${task.dueDate ? `<span><i class="ph ph-calendar"></i> ${task.dueDate}</span>` : ''}
+                            <span class="priority-${task.priority === 'high' ? 'high' : (task.priority === 'medium' ? 'med' : 'low')}">${task.priority.toUpperCase()}</span>
+                            ${task.tags.map(t => `<span class="tag">${t}</span>`).join('')}
+                        </div>
+                    </div>
+                    <button class="btn btn-ghost" onclick="app.deleteTask('${task.id}')"><i class="ph ph-trash"></i></button>
+                `;
+                return li;
+            }
+
+            // 2. Today View (Smart Filter)
+            renderTodayView(container) {
+                const today = new Date().toISOString().split('T')[0];
+                const todayTasks = this.state.tasks.filter(t => t.dueDate === today && !t.completed);
+                this.renderListView(container, todayTasks);
+                // Add helper to show other tasks if list is empty? For now, strict filtering.
+            }
+
+            // 3. Kanban View
+            renderKanbanView(container) {
+                const board = document.createElement('div');
+                board.className = 'kanban-board';
+                
+                const statuses = [
+                    { id: 'todo', label: 'To Do', filter: t => !t.completed },
+                    { id: 'doing', label: 'In Progress', filter: t => !t.completed && t.priority === 'high' }, // Simplified logic for demo
+                    { id: 'done', label: 'Done', filter: t => t.completed }
+                ];
+
+                statuses.forEach(status => {
+                    const col = document.createElement('div');
+                    col.className = 'kanban-col';
+                    col.innerHTML = `<div class="kanban-header">${status.label} <span class="badge">${this.state.tasks.filter(status.filter).length}</span></div>`;
+                    
+                    const body = document.createElement('div');
+                    body.className = 'kanban-body';
+                    this.state.tasks.filter(status.filter).forEach(task => {
+                        body.appendChild(this.createTaskElement(task));
+                    });
+                    col.appendChild(body);
+                    board.appendChild(col);
+                });
+
+                container.appendChild(board);
+            }
+
+            // 4. Eisenhower Matrix
+            renderEisenhowerView(container) {
+                const grid = document.createElement('div');
+                grid.className = 'eisenhower-grid';
+                
+                // Quadrant Logic
+                const q1 = this.state.tasks.filter(t => !t.completed && t.priority === 'high' && t.dueDate && new Date(t.dueDate) - new Date() <= 3 * 24 * 60 * 60 * 1000); // Urgent & Important
+                const q2 = this.state.tasks.filter(t => !t.completed && t.priority === 'high' && t.dueDate && new Date(t.dueDate) - new Date() >= 3 * 24 * 60 * 60 * 1000); // Not Urgent & Important
+                const q3 = this.state.tasks.filter(t => !t.completed && t.priority === 'medium' && t.dueDate&& new Date(t.dueDate) - new Date() <= 3 * 24 * 60 * 60 * 1000); // Urgent & Not Important
+                const q4 = this.state.tasks.filter(t => !t.completed && t.priority === 'low' && t.dueDate&& new Date(t.dueDate) - new Date() >= 3 * 24 * 60 * 60 * 1000); // Neither
+                
+                const createQuad = (title, tasks, color) => {
+                    const div = document.createElement('div');
+                    div.className = 'eisenhower-quadrant';
+                    div.style.borderTop = `4px solid ${color}`;
+                    div.innerHTML = `<div class="quadrant-title">${title}</div>`;
+                    tasks.forEach(t => div.appendChild(this.createTaskElement(t)));
+                    return div;
+                };
+
+                grid.appendChild(createQuad('Do First (Urgent/Imp)', q1, 'var(--danger)'));
+                grid.appendChild(createQuad('Schedule (Not Urgent/Imp)', q2, 'var(--primary)'));
+                grid.appendChild(createQuad('Delegate (Urgent/Not Imp)', q3, 'var(--warning)'));
+                grid.appendChild(createQuad('Eliminate (Neither)', q4, 'var(--text-secondary)'));
+
+                container.appendChild(grid);
+            }
+
+            // 5. Analytics View
+            // renderAnalyticsView(container) {
+            //     const total = this.state.tasks.length;
+            //     const completed = this.state.tasks.filter(t => t.completed).length;
+            //     const pending = total - completed;
+            //     const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+            //     const html = `
+            //         <div class="stats-grid">
+            //             <div class="stat-card">
+            //                 <div class="stat-value">${total}</div>
+            //                 <div class="stat-label">Total Tasks</div>
+            //             </div>
+            //             <div class="stat-card">
+            //                 <div class="stat-value">${pending}</div>
+            //                 <div class="stat-label">Pending</div>
+            //             </div>
+            //             <div class="stat-card">
+            //                 <div class="stat-value" style="color:var(--success)">${completionRate}%</div>
+            //                 <div class="stat-label">Completion Rate</div>
+            //             </div>
+            //         </div>
+                    
+            //         <h3>Productivity Trends</h3>
+            //         <div style="margin-top:1rem; height: 200px; background: var(--bg-panel); border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; align-items: flex-end; padding: 1rem; gap: 10px;">
+            //             <!-- Simulated Chart Bars -->
+            //             ${[40, 60, 30, 80, 50, 90, 70].map(h => 
+            //                 `<div style="flex:1; background:var(--primary); height:${h}%; border-radius:4px; opacity:0.8;"></div>`
+            //             ).join('')}
+            //         </div>
+            //         <div style="display:flex; justify-content:space-between; margin-top:0.5rem; color:var(--text-secondary); font-size:0.8rem;">
+            //             <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+            //         </div>
+            //     `;
+            //     container.innerHTML = html;
+            // }
+            renderAnalyticsView(container) {
+                const total = this.state.tasks.length;
+                const completed = this.state.tasks.filter(t => t.completed).length;
+                const pending = total - completed;
+                const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+                // ===== حساب المهام المكتملة لكل يوم =====
+                const days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+                const completedPerDay = [0,0,0,0,0,0,0];
+
+                this.state.tasks.forEach(task => {
+                    if(task.completed ) {
+                        const dayIndex = new Date().getDay(); // 0=Sun, 1=Mon ...
+                        const index = dayIndex === 0 ? 6 : dayIndex - 1; // تعديل ليكون 0=Mon
+                        completedPerDay[index]++;
+                    }
+                });
+                console.log("Completed Per Day:", completedPerDay);
+                console.log(this.state.tasks);
+                const maxCompleted = Math.max(...completedPerDay);
+                const barHeights = completedPerDay.map(n => maxCompleted ? (n / maxCompleted) * 100 : 0);
+
+                // ===== HTML =====
+                const html = `
+                     <style>
+                        .chart-bar-container {
+                            position: relative;
+                            flex: 1;
+                        }
+                        .chart-bar {
+                            background: var(--primary);
+                            border-radius: 4px;
+                            opacity: 0.8;
+                            height: 0;
+                            transition: height 0.3s;
+                        }
+                        .chart-bar-container:hover .chart-bar {
+                            opacity: 1;
+                        }
+                        .tooltip {
+                            position: absolute;
+                            bottom: 100%;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            margin-bottom: 5px;
+                            padding: 2px 6px;
+                            border-radius: 4px;
+                            background: var(--bg-accent);
+                            color: var(--text-primary);
+                            font-size: 0.75rem;
+                            white-space: nowrap;
+                            opacity: 0;
+                            pointer-events: none;
+                            transition: opacity 0.2s;
+                        }
+                        .chart-bar-container:hover .tooltip {
+                            opacity: 1;
+                        }
+                    </style>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">${total}</div>
+                            <div class="stat-label">Total Tasks</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${pending}</div>
+                            <div class="stat-label">Pending</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" style="color:var(--success)">${completionRate}%</div>
+                            <div class="stat-label">Completion Rate</div>
+                        </div>
+                    </div>
+                    
+                    <h3>Productivity Trends</h3>
+                    <div style="margin-top:1rem; height: 200px; background: var(--bg-panel); border-radius: var(--radius); border: 1px solid var(--border-color); display: flex; align-items: flex-end; padding: 1rem; gap: 10px;">
+                        ${barHeights.map(h => 
+                            `<div style="flex:1; background:var(--primary); height:${h}%; border-radius:4px; opacity:0.8;"></div>`
+                        ).join('')}
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:0.5rem; color:var(--text-secondary); font-size:0.8rem;">
+                        ${days.map(d => `<span>${d}</span>`).join('')}
+                    </div>
+                `;
+                container.innerHTML = html;
+            }
+            
+            renderUpcomingView(container) {
+                const upcoming = this.state.tasks
+                    .filter(t => t.dueDate && new Date(t.dueDate) > new Date() && !t.completed)
+                    .sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
+                this.renderListView(container, upcoming);
+            }
+
+            // --- Detail Panel & Interactions ---
+            openPanel(id) {
+                const task = this.state.tasks.find(t => t.id === id);
+                if (!task) return;
+                this.state.selectedTaskId = id;
+                
+                const panel = document.getElementById('task-details-panel');
+                const content = document.getElementById('panel-content');
+                
+                content.innerHTML = `
+                    <div class="detail-group">
+                        <label class="detail-label">Title</label>
+                        <input type="text" class="detail-input" value="${task.title}" onchange="app.updateTask('${id}', {title: this.value})">
+                    </div>
+                    
+                    <div class="detail-group">
+                        <label class="detail-label">Status</label>
+                        <select class="detail-input" onchange="app.updateTask('${id}', {priority: this.value})">
+                            <option value="low" ${task.priority === 'low' ? 'selected' : ''}>Low Priority</option>
+                            <option value="medium" ${task.priority === 'medium' ? 'selected' : ''}>Medium Priority</option>
+                            <option value="high" ${task.priority === 'high' ? 'selected' : ''}>High Priority</option>
+                        </select>
+                    </div>
+
+                    <div class="detail-group">
+                        <label class="detail-label">Due Date</label>
+                        <input type="date" class="detail-input" value="${task.dueDate || ''}" onchange="app.updateTask('${id}', {dueDate: this.value})">
+                    </div>
+
+                    <div class="pomodoro-widget">
+                        <div class="detail-label" style="color:rgba(255,255,255,0.8)">Focus Timer</div>
+                        <div class="timer-display" id="timer-display">25:00</div>
+                        <button class="btn" style="background:rgba(255,255,255,0.2); color:white; width:100%" onclick="app.toggleTimer()">Start Focus</button>
+                    </div>
+                    
+                    <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                        <label class="detail-label">Collaboration (Simulated)</label>
+                        <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem;">
+                            <div style="width:24px; height:24px; background:var(--primary); border-radius:50%;"></div>
+                            <span style="font-size:0.9rem;">You</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary);">Real-time sync disabled in offline mode.</div>
+                    </div>
+                `;
+                
+                panel.classList.add('active');
+            }
+
+            closePanel() {
+                document.getElementById('task-details-panel').classList.remove('active');
+                this.state.selectedTaskId = null;
+                this.stopTimer();
+            }
+
+            // --- Smart / "AI" Features ---
+
+            // Simulate NLP (Natural Language Processing)
+            handleSmartInput(text) {
+                if (!text.trim()) return;
+                
+                // Simple Regex parsing
+                let title = text;
+                let date = null;
+                let priority = 'medium';
+
+                // Detect "tomorrow"
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                
+                if (text.toLowerCase().includes('tomorrow')) {
+                    date = tomorrow.toISOString().split('T')[0];
+                } else if (text.match(/\d{4}-\d{2}-\d{2}/)) {
+                    // Detect ISO date
+                    const match = text.match(/\d{4}-\d{2}-\d{2}/);
+                    date = match[0];
+                }
+
+                // Detect Priority keywords
+                if (text.toLowerCase().includes('urgent') || text.toLowerCase().includes('important')) {
+                    priority = 'high';
+                }
+
+                this.addTask(title, priority, date);
+                document.getElementById('global-search').value = '';
+                this.showToast('Smart Task Created');
+            }
+
+            // Simulate AI Scheduling
+            simulateAISchedule() {
+                // Sort tasks by priority weight + due date proximity
+                // const priorityWeight = { 'high': 3, 'medium': 2, 'low': 1 };
+                
+                // this.state.tasks.sort((a, b) => {
+                //     const scoreA = priorityWeight[a.priority] + (a.dueDate ? 2 : 0);
+                //     const scoreB = priorityWeight[b.priority] + (b.dueDate ? 2 : 0);
+                //     return scoreB - scoreA; // Descending
+                // });
+                const priorityWeight = { 'high': 3, 'medium': 2, 'low': 1 };
+
+                this.state.tasks.sort((a, b) => {
+                    // 1. حساب score حسب الأولوية ووجود موعد نهائي
+                    const scoreA = priorityWeight[a.priority] + (a.dueDate ? 2 : 0);
+                    const scoreB = priorityWeight[b.priority] + (b.dueDate ? 2 : 0);
+
+                    // 2. لو الدرجة مختلفة، نرتب حسبها أولاً
+                    if (scoreA !== scoreB) {
+                        return scoreB - scoreA; // ترتيب تنازلي
+                    }
+
+                    // 3. لو نفس الدرجة، نرتب حسب قرب التاريخ
+                    if (a.dueDate && b.dueDate) {
+                        return new Date(a.dueDate) - new Date(b.dueDate); // أقرب تاريخ ييجي أولاً
+                    }
+
+                    // 4. لو واحدة بس عندها موعد نهائي
+                    if (a.dueDate) return -1; // المهمة اللي فيها تاريخ تجي قبل
+                    if (b.dueDate) return 1;
+
+                    // 5. لو مفيش تواريخ
+                    return 0;
+                });
+                this.saveData();
+                this.render();
+                this.showToast('Your Schedule is Optimized');
+            }
+
+            // --- Modal ---
+            openAddModal() {
+                document.getElementById('add-modal').classList.add('open');
+            }
+
+            addTaskFromModal() {
+                const title = document.getElementById('new-task-title').value;
+                const priority = document.getElementById('new-task-priority').value;
+                const date = document.getElementById('new-task-date').value;
+
+                if (title) {
+                    this.addTask(title, priority, date);
+                    document.getElementById('add-modal').classList.remove('open');
+                    document.getElementById('new-task-title').value = '';
+                }
+            }
+
+            // --- Pomodoro Timer ---
+            toggleTimer() {
+                if (this.timerInterval) {
+                    this.stopTimer();
+                } else {
+                    this.startTimer();
+                }
+            }
+
+            startTimer() {
+                let minutes = 25;
+                let seconds = 0;
+                const display = document.getElementById('timer-display');
+                if(!display) return;
+
+                display.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                this.timerInterval = setInterval(() => {
+                    if (seconds === 0) {
+                        if (minutes === 0) {
+                            this.stopTimer();
+                            this.playSound('alert');
+                            this.showToast('Focus Session Complete!');
+                            return;
+                        }
+                        minutes--;
+                        seconds = 59;
+                    } else {
+                        seconds--;
+                    }
+                    display.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }, 1000);
+                
+                // Update button text
+                const btn = document.querySelector('.pomodoro-widget button');
+                if(btn) btn.innerText = "Stop Focus";
+            }
+
+            stopTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                    const display = document.getElementById('timer-display');
+                    if(display) display.innerText = "25:00";
+                    const btn = document.querySelector('.pomodoro-widget button');
+                    if(btn) btn.innerText = "Start Focus";
+                }
+            }
+
+            // --- Utilities ---
+            showToast(msg) {
+                const toast = document.getElementById('toast');
+                toast.innerText = msg;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 3000);
+            }
+
+            playSound(type) {
+                // Simple Audio Context beep to avoid external assets
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                if (type === 'success') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(500, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1000, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.3);
+                } else if (type === 'alert') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+                    gain.gain.value = 0.1;
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.5);
+                }
+            }
+        }
+
+        // Initialize App
+        const app = new NexusApp();
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Quick add: Alt + A
+            if (e.altKey && e.key === 'a') {
+                e.preventDefault();
+                app.openAddModal();
+            }
+            // Close modal: Esc
+            if (e.key === 'Escape') {
+                document.getElementById('add-modal').classList.remove('open');
+                app.closePanel();
+            }
+        });
+
+    </script>
+</body>
+</html>
