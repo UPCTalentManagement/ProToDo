@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite Task Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>EliteTasks.</h2>
+            </div>
+            <nav class="filters">
+                <ul>
+                    <li class="active" data-filter="all">All Tasks</li>
+                    <li data-filter="high">🔥 High Priority</li>
+                    <li data-filter="work">💼 Work</li>
+                    <li data-filter="personal">🏠 Personal</li>
+                </ul>
+            </nav>
+            <div class="stats">
+                <p>Completed: <span id="completed-count">0</span></p>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <h1>Dashboard</h1>
+                <button id="add-task-btn" class="primary-btn">+ New Task</button>
+            </header>
+
+            <section id="task-form-container" class="hidden">
+                <form id="task-form">
+                    <input type="text" id="task-title" placeholder="Task title..." required>
+                    <div class="form-row">
+                        <select id="task-priority">
+                            <option value="low">Low Priority</option>
+                            <option value="medium">Medium Priority</option>
+                            <option value="high">High Priority</option>
+                        </select>
+                        <select id="task-category">
+                            <option value="work">Work</option>
+                            <option value="personal">Personal</option>
+                            <option value="learning">Learning</option>
+                        </select>
+                        <input type="date" id="task-date">
+                        <button type="submit" class="submit-btn">Save Task</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="task-board">
+                <div class="task-list" id="task-list">
+                    </div>
+            </section>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
